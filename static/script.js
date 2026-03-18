@@ -214,6 +214,85 @@ function hideAddAssignmentForm() {
     document.getElementById('assignment-weight').value = '1.0';
 }
 
+// Bulk Add Functions
+function showBulkAddForm() {
+    document.getElementById('bulk-add-form').style.display = 'block';
+    populateClassSelect('bulk-assignment-class');
+}
+
+function hideBulkAddForm() {
+    document.getElementById('bulk-add-form').style.display = 'none';
+    document.querySelector('#bulk-add-form form').reset();
+    // Reset to one row
+    const container = document.getElementById('bulk-assignments-container');
+    container.innerHTML = `
+        <div class="bulk-assignment-row">
+            <input type="text" placeholder="Assignment Name" class="bulk-name" required>
+            <input type="number" placeholder="Earned" step="0.01" class="bulk-earned" required>
+            <input type="number" placeholder="Possible" step="0.01" class="bulk-possible" required>
+        </div>
+    `;
+}
+
+function addBulkRow() {
+    const container = document.getElementById('bulk-assignments-container');
+    const row = document.createElement('div');
+    row.className = 'bulk-assignment-row';
+    row.innerHTML = `
+        <input type="text" placeholder="Assignment Name" class="bulk-name" required>
+        <input type="number" placeholder="Earned" step="0.01" class="bulk-earned" required>
+        <input type="number" placeholder="Possible" step="0.01" class="bulk-possible" required>
+    `;
+    container.appendChild(row);
+}
+
+async function bulkAddAssignments(event) {
+    event.preventDefault();
+
+    const classId = parseInt(document.getElementById('bulk-assignment-class').value);
+    const category = document.getElementById('bulk-category').value || null;
+    const weight = parseFloat(document.getElementById('bulk-weight').value);
+    const date = document.getElementById('bulk-date').value || null;
+
+    // Collect all rows
+    const rows = document.querySelectorAll('.bulk-assignment-row');
+    const assignments = [];
+
+    rows.forEach(row => {
+        const name = row.querySelector('.bulk-name').value;
+        const earned = parseFloat(row.querySelector('.bulk-earned').value);
+        const possible = parseFloat(row.querySelector('.bulk-possible').value);
+
+        assignments.push({
+            name,
+            class_id: classId,
+            category,
+            weight,
+            points_earned: earned,
+            points_possible: possible,
+            date
+        });
+    });
+
+    // Send to backend
+    try {
+        const response = await fetch('/api/assignments/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assignments })
+        });
+
+        if (response.ok) {
+            hideBulkAddForm();
+            loadAssignments();
+        } else {
+            alert('Failed to add assignments');
+        }
+    } catch (error) {
+        alert('Error adding assignments: ' + error.message);
+    }
+}
+
 async function populateClassSelect(selectId) {
     const response = await fetch('/api/classes');
     const classes = await response.json();

@@ -282,6 +282,42 @@ def handle_assignments():
         db.session.commit()
         return jsonify({'id': assignment.id, 'name': assignment.name}), 201
 
+@app.route('/api/assignments/bulk', methods=['POST'])
+@login_required
+def bulk_add_assignments():
+    data = request.json
+    assignments_data = data.get('assignments', [])
+
+    # Verify all classes belong to the user
+    user_classes = [c.id for c in Class.query.join(Term).filter(Term.user_id == session['user_id']).all()]
+
+    created_assignments = []
+    for assign_data in assignments_data:
+        class_id = assign_data.get('class_id')
+
+        # Security check
+        if class_id not in user_classes:
+            return jsonify({'error': 'Unauthorized access to class'}), 403
+
+        assignment = Assignment(
+            name=assign_data['name'],
+            class_id=class_id,
+            category=assign_data.get('category'),
+            weight=assign_data.get('weight', 1.0),
+            points_earned=assign_data.get('points_earned'),
+            points_possible=assign_data.get('points_possible'),
+            date=datetime.fromisoformat(assign_data['date']).date() if assign_data.get('date') else None
+        )
+        db.session.add(assignment)
+        created_assignments.append(assignment)
+
+    db.session.commit()
+    return jsonify({
+        'success': True,
+        'count': len(created_assignments),
+        'message': f'Successfully added {len(created_assignments)} assignments'
+    }), 201
+
 @app.route('/api/assignments/<int:assignment_id>', methods=['PUT', 'DELETE'])
 @login_required
 def handle_assignment(assignment_id):
