@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Grade Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Student Grade Tracker</h1>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('terms')">Terms</button>
+            <button class="tab-button" onclick="showTab('classes')">Classes</button>
+            <button class="tab-button" onclick="showTab('assignments')">Assignments</button>
+        </div>
+
+        <!-- Terms Tab -->
+        <div id="terms-tab" class="tab-content active">
+            <h2>Terms/Semesters</h2>
+            <button class="btn btn-primary" onclick="showAddTermForm()">+ Add Term</button>
+
+            <div id="add-term-form" class="form-card" style="display: none;">
+                <h3>Add New Term</h3>
+                <form onsubmit="addTerm(event)">
+                    <div class="form-group">
+                        <label>Term Name:</label>
+                        <input type="text" id="term-name" required placeholder="e.g., Fall 2024">
+                    </div>
+                    <div class="form-group">
+                        <label>Type:</label>
+                        <select id="term-type" required>
+                            <option value="quarter">Quarter</option>
+                            <option value="trimester">Trimester</option>
+                            <option value="semester">Semester</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date:</label>
+                        <input type="date" id="term-start">
+                    </div>
+                    <div class="form-group">
+                        <label>End Date:</label>
+                        <input type="date" id="term-end">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Term</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideAddTermForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="terms-list" class="list-container"></div>
+        </div>
+
+        <!-- Classes Tab -->
+        <div id="classes-tab" class="tab-content">
+            <h2>Classes</h2>
+            <button class="btn btn-primary" onclick="showAddClassForm()">+ Add Class</button>
+
+            <div id="add-class-form" class="form-card" style="display: none;">
+                <h3>Add New Class</h3>
+                <form onsubmit="addClass(event)">
+                    <div class="form-group">
+                        <label>Class Name:</label>
+                        <input type="text" id="class-name" required placeholder="e.g., Math 101">
+                    </div>
+                    <div class="form-group">
+                        <label>Term:</label>
+                        <select id="class-term" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Credits:</label>
+                        <input type="number" id="class-credits" step="0.5" value="1.0" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Class</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideAddClassForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="filter-group">
+                <label>Filter by Term:</label>
+                <select id="class-filter-term" onchange="loadClasses()">
+                    <option value="">All Terms</option>
+                </select>
+            </div>
+
+            <div id="classes-list" class="list-container"></div>
+        </div>
+
+        <!-- Assignments Tab -->
+        <div id="assignments-tab" class="tab-content">
+            <h2>Assignments</h2>
+            <button class="btn btn-primary" onclick="showAddAssignmentForm()">+ Add Assignment</button>
+
+            <div id="add-assignment-form" class="form-card" style="display: none;">
+                <h3>Add New Assignment</h3>
+                <form onsubmit="addAssignment(event)">
+                    <div class="form-group">
+                        <label>Assignment Name:</label>
+                        <input type="text" id="assignment-name" required placeholder="e.g., Homework 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Class:</label>
+                        <select id="assignment-class" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category:</label>
+                        <input type="text" id="assignment-category" placeholder="e.g., Homework, Test, Quiz">
+                    </div>
+                    <div class="form-group">
+                        <label>Points Earned:</label>
+                        <input type="number" id="assignment-earned" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Points Possible:</label>
+                        <input type="number" id="assignment-possible" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Weight (multiplier):</label>
+                        <input type="number" id="assignment-weight" step="0.1" value="1.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" id="assignment-date">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Add Assignment</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideAddAssignmentForm()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="filter-group">
+                <label>Filter by Class:</label>
+                <select id="assignment-filter-class" onchange="loadAssignments()">
+                    <option value="">All Classes</option>
+                </select>
+            </div>
+
+            <div id="assignments-list" class="list-container"></div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
