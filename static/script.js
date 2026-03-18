@@ -67,6 +67,7 @@ async function loadTerms() {
                 </div>
                 <div class="card-actions">
                     <button class="btn btn-success" onclick="downloadReport(${term.id}, '${term.name}')">Download Report</button>
+                    <button class="btn btn-primary" onclick="showEmailReportForm(${term.id}, '${term.name}')" style="background: #17a2b8;">Email to Parent</button>
                     <button class="btn btn-danger" onclick="deleteTerm(${term.id})">Delete</button>
                 </div>
             </div>
@@ -110,6 +111,50 @@ async function deleteTerm(termId) {
 
 async function downloadReport(termId, termName) {
     window.location.href = `/api/report/${termId}`;
+}
+
+function showEmailReportForm(termId, termName) {
+    document.getElementById('email-term-id').value = termId;
+    document.getElementById('email-term-name').value = termName;
+    document.getElementById('email-modal').style.display = 'flex';
+}
+
+function hideEmailModal() {
+    document.getElementById('email-modal').style.display = 'none';
+    document.getElementById('parent-email').value = '';
+    document.getElementById('teacher-password').value = '';
+}
+
+async function sendEmailReport(event) {
+    event.preventDefault();
+
+    const termId = document.getElementById('email-term-id').value;
+    const termName = document.getElementById('email-term-name').value;
+    const parentEmail = document.getElementById('parent-email').value;
+    const teacherPassword = document.getElementById('teacher-password').value;
+
+    try {
+        const response = await fetch('/api/email-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                term_id: parseInt(termId),
+                parent_email: parentEmail,
+                teacher_password: teacherPassword
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            alert(`Report successfully sent to ${parentEmail}!`);
+            hideEmailModal();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to send email'));
+        }
+    } catch (error) {
+        alert('Error sending email: ' + error.message);
+    }
 }
 
 // Classes

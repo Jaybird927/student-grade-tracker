@@ -3,6 +3,11 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -436,6 +441,134 @@ def calculate_class_grade(class_id):
         return 0.0
 
     return (total_weighted_points / total_weighted_possible) * 100
+
+@app.route('/api/email-report', methods=['POST'])
+@login_required
+def email_report():
+    TEACHER_PASSWORD = 'onecreativeapp'
+
+    data = request.json
+    term_id = data.get('term_id')
+    parent_email = data.get('parent_email')
+    teacher_password = data.get('teacher_password')
+
+    # Verify teacher password
+    if teacher_password != TEACHER_PASSWORD:
+        return jsonify({'error': 'Invalid teacher password'}), 403
+
+    # Verify user owns this term
+    term = Term.query.filter_by(id=term_id, user_id=session['user_id']).first()
+    if not term:
+        return jsonify({'error': 'Term not found'}), 404
+
+    # Generate PDF report
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # Title
+    title = Paragraph(f"<b>Grade Report - {term.name}</b>", styles['Title'])
+    elements.append(title)
+    elements.append(Spacer(1, 0.2*inch))
+
+    # Term info
+    if term.start_date and term.end_date:
+        date_range = Paragraph(f"{term.start_date.strftime('%m/%d/%Y')} - {term.end_date.strftime('%m/%d/%Y')}", styles['Normal'])
+        elements.append(date_range)
+        elements.append(Spacer(1, 0.3*inch))
+
+    # Classes and assignments
+    classes = Class.query.filter_by(term_id=term_id).all()
+
+    for class_obj in classes:
+        class_header = Paragraph(f"<b>{class_obj.name}</b>", styles['Heading2'])
+        elements.append(class_header)
+        elements.append(Spacer(1, 0.1*inch))
+
+        assignments = Assignment.query.filter_by(class_id=class_obj.id).all()
+
+        if assignments:
+            table_data = [['Assignment', 'Category', 'Score', 'Percentage']]
+            for a in assignments:
+                percentage = f"{(a.points_earned / a.points_possible * 100):.1f}%" if a.points_possible else "N/A"
+                score = f"{a.points_earned}/{a.points_possible}" if a.points_possible else "N/A"
+                table_data.append([a.name, a.category or '-', score, percentage])
+
+            grade_percent = calculate_class_grade(class_obj.id)
+            letter_grade = percentage_to_grade(grade_percent)
+            table_data.append(['', '', '<b>Class Grade:</b>', f'<b>{grade_percent:.1f}% ({letter_grade})</b>'])
+
+            table = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1.2*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ALIGN', (2, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, -1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -2), 1, colors.black),
+                ('LINEABOVE', (0, -1), (-1, -1), 2, colors.black),
+            ]))
+            elements.append(table)
+        else:
+            elements.append(Paragraph("No assignments recorded", styles['Normal']))
+
+        elements.append(Spacer(1, 0.3*inch))
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    # Send email
+    try:
+        # Get email configuration from environment variables
+        smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        sender_email = os.environ.get('SENDER_EMAIL')
+        sender_password = os.environ.get('SENDER_PASSWORD')
+
+        if not sender_email or not sender_password:
+            return jsonify({'error': 'Email not configured. Please set SENDER_EMAIL and SENDER_PASSWORD environment variables.'}), 500
+
+        # Create message
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = parent_email
+        msg['Subject'] = f'Grade Report - {term.name}'
+
+        body = f"""
+Dear Parent/Guardian,
+
+Please find attached the grade report for {term.name}.
+
+This report contains detailed information about all classes and assignments for this term.
+
+Best regards,
+{session.get('username')}
+        """
+
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Attach PDF
+        attachment = MIMEBase('application', 'pdf')
+        attachment.set_payload(buffer.read())
+        encoders.encode_base64(attachment)
+        attachment.add_header('Content-Disposition', f'attachment; filename=grade_report_{term.name.replace(" ", "_")}.pdf')
+        msg.attach(attachment)
+
+        # Send email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+
+        return jsonify({'success': True, 'message': f'Report sent to {parent_email}'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to send email: {str(e)}'}), 500
 
 
 if __name__ == '__main__':

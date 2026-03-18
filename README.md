@@ -8,10 +8,12 @@ A web-based student grade tracker with user authentication that supports multipl
 - **Multi-User Support**: Each user has their own private account and data
 - **Persistent Storage**: All data is saved to SQLite database and persists between sessions
 - **Multiple Terms**: Support for quarters, trimesters, and semesters
-- **Class Management**: Track multiple classes per term with credit hours
+- **Class Management**: Track multiple classes per term
 - **Assignment Tracking**: Record assignments with categories, weights, and scores
+- **Bulk Add**: Add multiple assignments at once with shared settings
 - **Automatic Grading**: Uses custom grading scale (A+ through F)
 - **PDF Reports**: Export detailed grade reports for any term
+- **Email to Parents**: Send grade reports via email with teacher password protection
 
 ## Grading Scale
 
@@ -48,11 +50,20 @@ python app.py
 1. Create a new project on [Railway](https://railway.app)
 2. Connect your GitHub repository
 3. Railway will automatically detect the Python application and deploy it
-4. **Important**: Set a secure SECRET_KEY environment variable in Railway:
-   - Go to your project settings
-   - Add a new variable: `SECRET_KEY` with a random secure string
+4. **Important**: Set environment variables in Railway:
+   - `SECRET_KEY`: A random secure string
+   - `SENDER_EMAIL`: Gmail address for sending reports (e.g., teacher@gmail.com)
+   - `SENDER_PASSWORD`: Gmail app password (not your regular password)
+   - `SMTP_SERVER`: smtp.gmail.com (default)
+   - `SMTP_PORT`: 587 (default)
 5. The SQLite database will persist on Railway's volume storage
 6. Access your deployed app and create your first account!
+
+### Setting up Gmail for Email Reports:
+1. Go to your Google Account settings
+2. Enable 2-Step Verification
+3. Generate an App Password for "Mail"
+4. Use this app password in the `SENDER_PASSWORD` environment variable
 
 ## Usage
 
