@@ -1,26 +1,43 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+from functools import wraps
 import io
 import os
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grades.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 db = SQLAlchemy(app)
 
 # Database Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    terms = db.relationship('Term', backref='user', cascade='all, delete-orphan', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
 class Term(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(20), nullable=False)  # 'quarter' or 'trimester'
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     classes = db.relationship('Class', backref='term', cascade='all, delete-orphan', lazy=True)
 
 class Class(db.Model):
@@ -43,6 +60,15 @@ class Assignment(db.Model):
 # Initialize database
 with app.app_context():
     db.create_all()
+
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Helper function to convert percentage to letter grade
 def percentage_to_grade(percentage):
@@ -76,12 +102,63 @@ def percentage_to_grade(percentage):
 # API Routes
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if 'user_id' in session:
+        return render_template('index.html')
+    return render_template('login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
+
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password):
+            session['user_id'] = user.id
+            session['username'] = user.username
+            return jsonify({'success': True, 'username': user.username})
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
+
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 400
+
+        user = User(username=username)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        session['user_id'] = user.id
+        session['username'] = user.username
+        return jsonify({'success': True, 'username': user.username})
+
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/api/current-user')
+def current_user():
+    if 'user_id' in session:
+        return jsonify({'username': session.get('username')})
+    return jsonify({'error': 'Not logged in'}), 401
 
 @app.route('/api/terms', methods=['GET', 'POST'])
+@login_required
 def handle_terms():
     if request.method == 'GET':
-        terms = Term.query.all()
+        terms = Term.query.filter_by(user_id=session['user_id']).all()
         return jsonify([{
             'id': t.id,
             'name': t.name,
@@ -96,27 +173,34 @@ def handle_terms():
             name=data['name'],
             type=data['type'],
             start_date=datetime.fromisoformat(data['start_date']).date() if data.get('start_date') else None,
-            end_date=datetime.fromisoformat(data['end_date']).date() if data.get('end_date') else None
+            end_date=datetime.fromisoformat(data['end_date']).date() if data.get('end_date') else None,
+            user_id=session['user_id']
         )
         db.session.add(term)
         db.session.commit()
         return jsonify({'id': term.id, 'name': term.name}), 201
 
 @app.route('/api/terms/<int:term_id>', methods=['DELETE'])
+@login_required
 def delete_term(term_id):
-    term = Term.query.get_or_404(term_id)
+    term = Term.query.filter_by(id=term_id, user_id=session['user_id']).first_or_404()
     db.session.delete(term)
     db.session.commit()
     return '', 204
 
 @app.route('/api/classes', methods=['GET', 'POST'])
+@login_required
 def handle_classes():
     if request.method == 'GET':
         term_id = request.args.get('term_id')
+        user_terms = [t.id for t in Term.query.filter_by(user_id=session['user_id']).all()]
+
         if term_id:
+            if int(term_id) not in user_terms:
+                return jsonify([])
             classes = Class.query.filter_by(term_id=term_id).all()
         else:
-            classes = Class.query.all()
+            classes = Class.query.join(Term).filter(Term.user_id == session['user_id']).all()
 
         result = []
         for c in classes:
@@ -145,20 +229,29 @@ def handle_classes():
         return jsonify({'id': class_obj.id, 'name': class_obj.name}), 201
 
 @app.route('/api/classes/<int:class_id>', methods=['DELETE'])
+@login_required
 def delete_class(class_id):
-    class_obj = Class.query.get_or_404(class_id)
+    class_obj = Class.query.join(Term).filter(
+        Class.id == class_id,
+        Term.user_id == session['user_id']
+    ).first_or_404()
     db.session.delete(class_obj)
     db.session.commit()
     return '', 204
 
 @app.route('/api/assignments', methods=['GET', 'POST'])
+@login_required
 def handle_assignments():
     if request.method == 'GET':
         class_id = request.args.get('class_id')
+        user_classes = [c.id for c in Class.query.join(Term).filter(Term.user_id == session['user_id']).all()]
+
         if class_id:
+            if int(class_id) not in user_classes:
+                return jsonify([])
             assignments = Assignment.query.filter_by(class_id=class_id).all()
         else:
-            assignments = Assignment.query.all()
+            assignments = Assignment.query.join(Class).join(Term).filter(Term.user_id == session['user_id']).all()
 
         return jsonify([{
             'id': a.id,
@@ -188,8 +281,12 @@ def handle_assignments():
         return jsonify({'id': assignment.id, 'name': assignment.name}), 201
 
 @app.route('/api/assignments/<int:assignment_id>', methods=['PUT', 'DELETE'])
+@login_required
 def handle_assignment(assignment_id):
-    assignment = Assignment.query.get_or_404(assignment_id)
+    assignment = Assignment.query.join(Class).join(Term).filter(
+        Assignment.id == assignment_id,
+        Term.user_id == session['user_id']
+    ).first_or_404()
 
     if request.method == 'PUT':
         data = request.json
@@ -209,8 +306,9 @@ def handle_assignment(assignment_id):
         return '', 204
 
 @app.route('/api/report/<int:term_id>')
+@login_required
 def generate_report(term_id):
-    term = Term.query.get_or_404(term_id)
+    term = Term.query.filter_by(id=term_id, user_id=session['user_id']).first_or_404()
 
     # Create PDF in memory
     buffer = io.BytesIO()

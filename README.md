@@ -1,9 +1,12 @@
 # Student Grade Tracker
 
-A web-based student grade tracker that supports multiple quarters/trimesters, classes, and assignments with automatic grade calculation and PDF report generation.
+A web-based student grade tracker with user authentication that supports multiple quarters/trimesters, classes, and assignments with automatic grade calculation and PDF report generation. Each user has their own private account with persistent data storage.
 
 ## Features
 
+- **User Authentication**: Secure login and registration system with password hashing
+- **Multi-User Support**: Each user has their own private account and data
+- **Persistent Storage**: All data is saved to SQLite database and persists between sessions
 - **Multiple Terms**: Support for quarters, trimesters, and semesters
 - **Class Management**: Track multiple classes per term with credit hours
 - **Assignment Tracking**: Record assignments with categories, weights, and scores
@@ -43,9 +46,13 @@ python app.py
 ## Deploying to Railway
 
 1. Create a new project on [Railway](https://railway.app)
-2. Connect your GitHub repository or deploy directly
+2. Connect your GitHub repository
 3. Railway will automatically detect the Python application and deploy it
-4. The app uses SQLite database which persists on Railway's volume storage
+4. **Important**: Set a secure SECRET_KEY environment variable in Railway:
+   - Go to your project settings
+   - Add a new variable: `SECRET_KEY` with a random secure string
+5. The SQLite database will persist on Railway's volume storage
+6. Access your deployed app and create your first account!
 
 ## Usage
 

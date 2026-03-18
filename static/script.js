@@ -329,6 +329,19 @@ async function deleteAssignment(assignmentId) {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load current user
+    try {
+        const response = await fetch('/api/current-user');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('username-display').textContent = `Welcome, ${data.username}`;
+        } else {
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        window.location.href = '/login';
+    }
+
     loadTerms();
 });
