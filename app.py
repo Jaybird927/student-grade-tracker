@@ -44,34 +44,34 @@ class Assignment(db.Model):
 with app.app_context():
     db.create_all()
 
-# Helper function to convert percentage to letter grade and GPA
+# Helper function to convert percentage to letter grade
 def percentage_to_grade(percentage):
     if percentage >= 98:
-        return 'A+', 4.0
+        return 'A+'
     elif percentage >= 93:
-        return 'A', 4.0
+        return 'A'
     elif percentage >= 90:
-        return 'A-', 3.7
+        return 'A-'
     elif percentage >= 88:
-        return 'B+', 3.3
+        return 'B+'
     elif percentage >= 83:
-        return 'B', 3.0
+        return 'B'
     elif percentage >= 80:
-        return 'B-', 2.7
+        return 'B-'
     elif percentage >= 78:
-        return 'C+', 2.3
+        return 'C+'
     elif percentage >= 73:
-        return 'C', 2.0
+        return 'C'
     elif percentage >= 70:
-        return 'C-', 1.7
+        return 'C-'
     elif percentage >= 68:
-        return 'D+', 1.3
+        return 'D+'
     elif percentage >= 63:
-        return 'D', 1.0
+        return 'D'
     elif percentage >= 60:
-        return 'D-', 0.7
+        return 'D-'
     else:
-        return 'F', 0.0
+        return 'F'
 
 # API Routes
 @app.route('/')
@@ -121,15 +121,14 @@ def handle_classes():
         result = []
         for c in classes:
             grade_percent = calculate_class_grade(c.id)
-            letter_grade, gpa = percentage_to_grade(grade_percent)
+            letter_grade = percentage_to_grade(grade_percent)
             result.append({
                 'id': c.id,
                 'name': c.name,
                 'term_id': c.term_id,
                 'credits': c.credits,
                 'grade': grade_percent,
-                'letter_grade': letter_grade,
-                'gpa': gpa
+                'letter_grade': letter_grade
             })
 
         return jsonify(result)
@@ -251,7 +250,7 @@ def generate_report(term_id):
 
             # Add class grade
             grade_percent = calculate_class_grade(class_obj.id)
-            letter_grade, _ = percentage_to_grade(grade_percent)
+            letter_grade = percentage_to_grade(grade_percent)
             data.append(['', '', '<b>Class Grade:</b>', f'<b>{grade_percent:.1f}% ({letter_grade})</b>'])
 
             table = Table(data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1.2*inch])
@@ -272,11 +271,6 @@ def generate_report(term_id):
             elements.append(Paragraph("No assignments recorded", styles['Normal']))
 
         elements.append(Spacer(1, 0.3*inch))
-
-    # Overall GPA
-    gpa = calculate_term_gpa(term_id)
-    overall = Paragraph(f"<b>Overall GPA: {gpa:.2f}</b>", styles['Heading2'])
-    elements.append(overall)
 
     # Build PDF
     doc.build(elements)
@@ -307,24 +301,6 @@ def calculate_class_grade(class_id):
 
     return (total_weighted_points / total_weighted_possible) * 100
 
-def calculate_term_gpa(term_id):
-    classes = Class.query.filter_by(term_id=term_id).all()
-    if not classes:
-        return 0.0
-
-    total_grade_points = 0
-    total_credits = 0
-
-    for class_obj in classes:
-        grade_percentage = calculate_class_grade(class_obj.id)
-        _, grade_point = percentage_to_grade(grade_percentage)
-        total_grade_points += grade_point * class_obj.credits
-        total_credits += class_obj.credits
-
-    if total_credits == 0:
-        return 0.0
-
-    return total_grade_points / total_credits
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

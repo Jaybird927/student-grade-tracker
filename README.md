@@ -1,31 +1,30 @@
 # Student Grade Tracker
 
-A web-based student grade tracker that supports multiple quarters/trimesters, classes, and assignments with automatic GPA calculation and PDF report generation.
+A web-based student grade tracker that supports multiple quarters/trimesters, classes, and assignments with automatic grade calculation and PDF report generation.
 
 ## Features
 
 - **Multiple Terms**: Support for quarters, trimesters, and semesters
 - **Class Management**: Track multiple classes per term with credit hours
 - **Assignment Tracking**: Record assignments with categories, weights, and scores
-- **Automatic Grading**: Uses your custom grading scale (A+ through F)
-- **GPA Calculation**: Automatic GPA calculation based on letter grades
+- **Automatic Grading**: Uses custom grading scale (A+ through F)
 - **PDF Reports**: Export detailed grade reports for any term
 
 ## Grading Scale
 
-- A+ (98-100%): 4.0 GPA
-- A (93-96%): 4.0 GPA
-- A- (90-92%): 3.7 GPA
-- B+ (88-89%): 3.3 GPA
-- B (83-87%): 3.0 GPA
-- B- (80-82%): 2.7 GPA
-- C+ (78-79%): 2.3 GPA
-- C (73-77%): 2.0 GPA
-- C- (70-72%): 1.7 GPA
-- D+ (68-69%): 1.3 GPA
-- D (63-67%): 1.0 GPA
-- D- (60-62%): 0.7 GPA
-- F (<60%): 0.0 GPA
+- A+ (98-100%)
+- A (93-96%)
+- A- (90-92%)
+- B+ (88-89%)
+- B (83-87%)
+- B- (80-82%)
+- C+ (78-79%)
+- C (73-77%)
+- C- (70-72%)
+- D+ (68-69%)
+- D (63-67%)
+- D- (60-62%)
+- F (<60%)
 
 ## Local Development
 
@@ -75,7 +74,7 @@ python app.py
 ### Generating Reports
 1. Go to the "Terms" tab
 2. Click "Download Report" on any term
-3. A PDF will be generated with all classes, assignments, and GPA
+3. A PDF will be generated with all classes, assignments, and grades
 
 ## Technology Stack
 

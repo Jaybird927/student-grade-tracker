@@ -171,7 +171,6 @@ async function loadClasses() {
             </div>
             <div class="card-body">
                 <p><strong>Credits:</strong> ${cls.credits}</p>
-                <p><strong>GPA Points:</strong> ${cls.gpa.toFixed(2)}</p>
             </div>
         `;
         list.appendChild(card);
