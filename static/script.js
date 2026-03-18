@@ -121,7 +121,6 @@ function showAddClassForm() {
 function hideAddClassForm() {
     document.getElementById('add-class-form').style.display = 'none';
     document.getElementById('class-name').value = '';
-    document.getElementById('class-credits').value = '1.0';
 }
 
 async function populateTermSelect(selectId) {
@@ -173,9 +172,6 @@ async function loadClasses() {
                     <button class="btn btn-danger" onclick="deleteClass(${cls.id})">Delete</button>
                 </div>
             </div>
-            <div class="card-body">
-                <p><strong>Credits:</strong> ${cls.credits}</p>
-            </div>
         `;
         list.appendChild(card);
     }
@@ -186,8 +182,7 @@ async function addClass(event) {
 
     const data = {
         name: document.getElementById('class-name').value,
-        term_id: parseInt(document.getElementById('class-term').value),
-        credits: parseFloat(document.getElementById('class-credits').value)
+        term_id: parseInt(document.getElementById('class-term').value)
     };
 
     await fetch('/api/classes', {

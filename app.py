@@ -15,6 +15,9 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grades.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400 * 30  # 30 days
 db = SQLAlchemy(app)
 
 # Database Models
@@ -44,7 +47,6 @@ class Class(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     term_id = db.Column(db.Integer, db.ForeignKey('term.id'), nullable=False)
-    credits = db.Column(db.Float, default=1.0)
     assignments = db.relationship('Assignment', backref='class_ref', cascade='all, delete-orphan', lazy=True)
 
 class Assignment(db.Model):
@@ -115,6 +117,7 @@ def login():
 
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            session.permanent = True
             session['user_id'] = user.id
             session['username'] = user.username
             return jsonify({'success': True, 'username': user.username})
@@ -137,6 +140,7 @@ def register():
         db.session.add(user)
         db.session.commit()
 
+        session.permanent = True
         session['user_id'] = user.id
         session['username'] = user.username
         return jsonify({'success': True, 'username': user.username})
@@ -210,7 +214,6 @@ def handle_classes():
                 'id': c.id,
                 'name': c.name,
                 'term_id': c.term_id,
-                'credits': c.credits,
                 'grade': grade_percent,
                 'letter_grade': letter_grade
             })
@@ -221,8 +224,7 @@ def handle_classes():
         data = request.json
         class_obj = Class(
             name=data['name'],
-            term_id=data['term_id'],
-            credits=data.get('credits', 1.0)
+            term_id=data['term_id']
         )
         db.session.add(class_obj)
         db.session.commit()
@@ -332,7 +334,7 @@ def generate_report(term_id):
 
     for class_obj in classes:
         # Class header
-        class_header = Paragraph(f"<b>{class_obj.name}</b> (Credits: {class_obj.credits})", styles['Heading2'])
+        class_header = Paragraph(f"<b>{class_obj.name}</b>", styles['Heading2'])
         elements.append(class_header)
         elements.append(Spacer(1, 0.1*inch))
 
