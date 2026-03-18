@@ -44,11 +44,12 @@ function hideAddTermForm() {
 }
 
 async function loadTerms() {
-    const response = await fetch('/api/terms');
-    const terms = await response.json();
+    try {
+        const response = await fetch('/api/terms');
+        const terms = await response.json();
 
-    const list = document.getElementById('terms-list');
-    list.innerHTML = '';
+        const list = document.getElementById('terms-list');
+        list.innerHTML = '';
 
     for (const term of terms) {
         const card = document.createElement('div');
@@ -74,6 +75,9 @@ async function loadTerms() {
             </div>
         `;
         list.appendChild(card);
+    }
+    } catch (error) {
+        console.error('Error loading terms:', error);
     }
 }
 

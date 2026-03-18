@@ -27,7 +27,7 @@
         <!-- Terms Tab -->
         <div id="terms-tab" class="tab-content active">
             <h2>Terms/Semesters</h2>
-            <button class="btn btn-primary" onclick="showAddTermForm()">+ Add Term</button>
+            <button class="btn btn-primary" onclick="showAddTermForm(); event.stopPropagation();">+ Add Term</button>
 
             <div id="add-term-form" class="form-card" style="display: none;">
                 <h3>Add New Term</h3>
@@ -65,7 +65,7 @@
         <!-- Classes Tab -->
         <div id="classes-tab" class="tab-content">
             <h2>Classes</h2>
-            <button class="btn btn-primary" onclick="showAddClassForm()">+ Add Class</button>
+            <button class="btn btn-primary" onclick="showAddClassForm(); event.stopPropagation();">+ Add Class</button>
 
             <div id="add-class-form" class="form-card" style="display: none;">
                 <h3>Add New Class</h3>
@@ -102,7 +102,7 @@
         <!-- Assignments Tab -->
         <div id="assignments-tab" class="tab-content">
             <h2>Assignments</h2>
-            <button class="btn btn-primary" onclick="showAddAssignmentForm()">+ Add Assignment</button>
+            <button class="btn btn-primary" onclick="showAddAssignmentForm(); event.stopPropagation();">+ Add Assignment</button>
 
             <div id="add-assignment-form" class="form-card" style="display: none;">
                 <h3>Add New Assignment</h3>
